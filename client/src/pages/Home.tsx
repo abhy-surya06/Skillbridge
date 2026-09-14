@@ -157,6 +157,31 @@ function SkillCard({ skill }: { skill: Skill }) {
   );
 }
 
+function WorkspaceInsights({ onToast, skillsData }: { onToast: (message: string) => void; skillsData: Skill[] }) {
+  const verifiedCount = skillsData.filter((skill) => skill.status === "verified").length;
+  const activeCount = skillsData.filter((skill) => skill.status !== "decaying").length;
+  return (
+    <section className="workspace-insights">
+      <div className="insight-panel health-panel">
+        <div className="section-heading compact"><div><p className="eyebrow">AT A GLANCE</p><h2>Skill health</h2><p>How your signal is holding up this week.</p></div><div className="health-score"><strong>84%</strong><span>healthy</span></div></div>
+        <div className="health-track"><i style={{ width: "84%" }} /></div>
+        <div className="health-breakdown"><div><span className="health-key blue" />Verified<strong>{verifiedCount || 2}</strong></div><div><span className="health-key mint" />Active<strong>{activeCount || 3}</strong></div><div><span className="health-key coral" />Needs practice<strong>{skillsData.filter((skill) => skill.status === "decaying").length || 1}</strong></div></div>
+        <button className="text-button" onClick={() => onToast("Skill health details opened.")}>See health details <ArrowRight size={15} /></button>
+      </div>
+      <div className="insight-panel focus-panel">
+        <div className="insight-panel-header"><div><p className="eyebrow">RECOMMENDED FOCUS</p><h2>Close your next gap</h2></div><div className="soft-icon lilac"><Target size={17} /></div></div>
+        <div className="focus-item"><div className="focus-index">01</div><div><strong>Systems thinking</strong><span>Unlocks 3 more product roles</span></div><span className="focus-score">42%</span><ChevronRight size={16} /></div>
+        <div className="focus-item"><div className="focus-index">02</div><div><strong>TypeScript practice</strong><span>+8% confidence within one challenge</span></div><span className="focus-score warm">62%</span><ChevronRight size={16} /></div>
+        <button className="soft-action" onClick={() => onToast("Personalized learning plan opened.")}><BookOpen size={14} /> Build a 2-week plan</button>
+      </div>
+      <div className="insight-panel activity-panel">
+        <div className="section-heading compact"><div><p className="eyebrow">RECENT ACTIVITY</p><h2>Verification trail</h2></div><button className="icon-button ghost" onClick={() => onToast("Full activity history opened.")} aria-label="View activity history"><MoreHorizontal size={18} /></button></div>
+        <div className="activity-list"><div className="activity-item"><span className="activity-icon verified"><ShieldCheck size={14} /></span><div><strong>React architecture verified</strong><span>Challenge score 86 · 12 days ago</span></div><Award size={15} className="activity-award" /></div><div className="activity-item"><span className="activity-icon claimed"><FileCheck2 size={14} /></span><div><strong>User research claimed</strong><span>Added from resume · 18 days ago</span></div><span className="activity-tag">CLAIMED</span></div><div className="activity-item"><span className="activity-icon practice"><Flame size={14} /></span><div><strong>Product thinking practiced</strong><span>Challenge score 74 · 28 days ago</span></div><TrendingUp size={15} className="activity-trend" /></div></div>
+      </div>
+    </section>
+  );
+}
+
 function RingChart({ value, label }: { value: number; label: string }) {
   const circumference = 2 * Math.PI * 42;
   const offset = circumference - (value / 100) * circumference;
@@ -261,6 +286,8 @@ function TalentView({ onToast, skillsData, onChallenge }: { onToast: (message: s
         <div className="section-heading"><div><p className="eyebrow">YOUR SIGNAL MAP</p><h2>Skill graph</h2><p>Capability that compounds with every real attempt.</p></div><button className="text-button" onClick={() => setShowAll(!showAll)}>{showAll ? "Show less" : "View all skills"}<ChevronRight size={16} /></button></div>
         <div className="skills-grid">{visibleSkills.map((skill) => <SkillCard key={skill.name} skill={skill} />)}<button className="add-skill-card" onClick={() => onToast("Choose a skill family to add to your graph.")}><span><Sparkles size={19} /></span><strong>Bridge a new gap</strong><small>Add a skill to verify</small><ArrowRight size={16} /></button></div>
       </section>
+
+      <WorkspaceInsights onToast={onToast} skillsData={skillsData} />
 
       <section className="lower-grid">
         <div className="section-block matches-block"><div className="section-heading compact"><div><p className="eyebrow">DATA-BACKED DISCOVERY</p><h2>Good fits are finding you</h2></div><button className="icon-button ghost" onClick={() => onToast("All opportunities are loading.")} aria-label="More opportunities"><MoreHorizontal size={18} /></button></div><div className="match-list">{matches.map((match) => <div className="match-row" key={match.company}><div className={`company-mark ${match.color}`}>{match.initials}</div><div className="match-copy"><strong>{match.company}</strong><span>{match.role}</span></div><div className="match-score"><strong>{match.score}%</strong><span>{match.tag}</span></div><button className="icon-button ghost" onClick={() => onToast(`Opening ${match.company} opportunity.`)} aria-label={`View ${match.company}`}><ChevronRight size={17} /></button></div>)}</div></div>
