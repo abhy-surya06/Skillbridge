@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { startLogin } from "@/const";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Award,
@@ -37,6 +40,7 @@ import {
 type Role = "talent" | "hiring" | "academia";
 
 type Skill = {
+  id?: number;
   name: string;
   family: string;
   level: string;
@@ -96,6 +100,14 @@ const institutionStats = [
   { label: "Assessment completion", value: "64%", delta: "+8%", accent: "mint" },
   { label: "Industry readiness", value: "7.8/10", delta: "+0.6", accent: "coral" },
 ];
+
+const skillIconMap: Record<string, typeof Code2> = {
+  code: Code2,
+  compass: Compass,
+  zap: Zap,
+  users: Users,
+  sparkles: Sparkles,
+};
 
 function Logo() {
   return (
@@ -206,7 +218,7 @@ function AppNav({ role, setRole, darkMode, setDarkMode, onToast }: { role: Role;
   );
 }
 
-function TopBar({ role, darkMode, setDarkMode, onToast }: { role: Role; darkMode: boolean; setDarkMode: (value: boolean) => void; onToast: (message: string) => void }) {
+function TopBar({ role, darkMode, setDarkMode, onToast, isAuthenticated, onLogin }: { role: Role; darkMode: boolean; setDarkMode: (value: boolean) => void; onToast: (message: string) => void; isAuthenticated: boolean; onLogin: () => void }) {
   const headings = { talent: ["Good morning, Amelia", "Your profile is gaining signal."], hiring: ["Good morning, Rowan", "Find the signal behind the resume."], academia: ["Good morning, Dr. Chen", "A clearer read on learner readiness."] };
   return (
     <header className="topbar">
@@ -216,15 +228,16 @@ function TopBar({ role, darkMode, setDarkMode, onToast }: { role: Role; darkMode
         <button className="icon-button" onClick={() => onToast("Search is ready. Try 'React architecture'.")} aria-label="Search"><Search size={18} /></button>
         <button className="icon-button notification" onClick={() => onToast("You have 3 new updates.")} aria-label="Notifications"><Bell size={18} /><i /></button>
         <button className="icon-button theme-button" onClick={() => setDarkMode(!darkMode)} aria-label={darkMode ? "Use light theme" : "Use dark theme"}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button>
+        {!isAuthenticated && <button className="primary-button small save-login" onClick={onLogin}>Sign in to save</button>}
         <button className="top-profile" onClick={() => onToast("Profile menu opened.")}><span className="avatar avatar-sage">AR</span><ChevronDown size={15} /></button>
       </div>
     </header>
   );
 }
 
-function TalentView({ onToast }: { onToast: (message: string) => void }) {
+function TalentView({ onToast, skillsData, onChallenge }: { onToast: (message: string) => void; skillsData: Skill[]; onChallenge: (skillId?: number) => void }) {
   const [showAll, setShowAll] = useState(false);
-  const visibleSkills = showAll ? skills : skills.slice(0, 3);
+  const visibleSkills = showAll ? skillsData : skillsData.slice(0, 3);
   return (
     <>
       <section className="hero-grid">
@@ -240,7 +253,7 @@ function TalentView({ onToast }: { onToast: (message: string) => void }) {
           <h2>Make TypeScript active again.</h2>
           <p>Your confidence dipped 8% since your last practice. A short challenge can bring it back.</p>
           <div className="action-progress"><div><span>Current signal</span><strong>62%</strong></div><SkillMeter score={62} status="decaying" /></div>
-          <button className="primary-button" onClick={() => onToast("TypeScript challenge queued — you’ve got this.")}>Start challenge <ArrowRight size={16} /></button>
+          <button className="primary-button" onClick={() => onChallenge(skillsData.find((skill) => skill.name === "TypeScript")?.id)}>Start challenge <ArrowRight size={16} /></button>
         </div>
       </section>
 
@@ -283,15 +296,45 @@ function AcademiaView({ onToast }: { onToast: (message: string) => void }) {
 }
 
 export default function Home() {
+  const { user, isAuthenticated } = useAuth();
+  const dashboard = trpc.dashboard.snapshot.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const savePreferences = trpc.dashboard.savePreferences.useMutation();
+  const startChallenge = trpc.dashboard.startChallenge.useMutation();
+  const utils = trpc.useUtils();
   const [role, setRole] = useState<Role>("talent");
   const [darkMode, setDarkMode] = useState(false);
   const [toast, setToast] = useState("");
   const onToast = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
-  const content = useMemo(() => role === "talent" ? <TalentView onToast={onToast} /> : role === "hiring" ? <HiringView onToast={onToast} /> : <AcademiaView onToast={onToast} />, [role]);
+  useEffect(() => {
+    if (!dashboard.data?.preferences) return;
+    setRole(dashboard.data.preferences.activeRole as Role);
+    setDarkMode(dashboard.data.preferences.theme === "dark");
+  }, [dashboard.data?.preferences]);
+  const persistPreferences = (next: Partial<{ role: Role; darkMode: boolean }>) => {
+    if (!isAuthenticated) return;
+    savePreferences.mutate({
+      activeRole: next.role,
+      theme: next.darkMode === undefined ? undefined : next.darkMode ? "dark" : "light",
+    });
+  };
+  const changeRole = (nextRole: Role) => { setRole(nextRole); persistPreferences({ role: nextRole }); };
+  const changeTheme = (nextDarkMode: boolean) => { setDarkMode(nextDarkMode); persistPreferences({ darkMode: nextDarkMode }); };
+  const handleChallenge = (skillId?: number) => {
+    if (!skillId || !isAuthenticated) {
+      onToast("TypeScript challenge queued — you’ve got this.");
+      return;
+    }
+    startChallenge.mutate({ skillId }, {
+      onSuccess: async () => { await utils.dashboard.snapshot.invalidate(); onToast("Challenge saved — you’ve got this."); },
+      onError: () => onToast("We couldn't save that challenge yet."),
+    });
+  };
+  const skillsData = dashboard.data?.skills.map((skill) => ({ ...skill, icon: skillIconMap[skill.iconKey] ?? Sparkles })) ?? skills;
+  const content = useMemo(() => role === "talent" ? <TalentView onToast={onToast} skillsData={skillsData} onChallenge={handleChallenge} /> : role === "hiring" ? <HiringView onToast={onToast} /> : <AcademiaView onToast={onToast} />, [role, skillsData]);
   return (
     <div className={`app-shell ${darkMode ? "theme-dark" : ""}`}>
-      <AppNav role={role} setRole={setRole} darkMode={darkMode} setDarkMode={setDarkMode} onToast={onToast} />
-      <main className="main-content"><TopBar role={role} darkMode={darkMode} setDarkMode={setDarkMode} onToast={onToast} /><div className="page-content">{content}</div><footer className="site-footer"><span>SkillBridge / Verified potential, made visible.</span><span>Last sync 2 min ago <span className="sync-dot" /></span></footer></main>
+      <AppNav role={role} setRole={changeRole} darkMode={darkMode} setDarkMode={changeTheme} onToast={onToast} />
+      <main className="main-content"><TopBar role={role} darkMode={darkMode} setDarkMode={changeTheme} onToast={onToast} isAuthenticated={isAuthenticated} onLogin={startLogin} /><div className="page-content">{content}</div><footer className="site-footer"><span>SkillBridge / Verified potential, made visible.</span><span>{dashboard.isFetching ? "Syncing profile…" : isAuthenticated ? "Saved just now" : "Preview mode"} <span className="sync-dot" /></span></footer></main>
       {toast && <div className="toast"><Sparkles size={15} />{toast}</div>}
     </div>
   );
