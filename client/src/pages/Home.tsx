@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import {
   ArrowRight,
   Award,
@@ -340,6 +341,7 @@ function AcademiaView({ onToast }: { onToast: (message: string) => void }) {
 }
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const dashboard = trpc.dashboard.snapshot.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const savePreferences = trpc.dashboard.savePreferences.useMutation();
@@ -378,7 +380,7 @@ export default function Home() {
   return (
     <div className={`app-shell ${darkMode ? "theme-dark" : ""}`}>
       <AppNav role={role} setRole={changeRole} darkMode={darkMode} setDarkMode={changeTheme} onToast={onToast} />
-      <main className="main-content"><TopBar role={role} darkMode={darkMode} setDarkMode={changeTheme} onToast={onToast} isAuthenticated={isAuthenticated} onLogin={startLogin} /><div className="page-content">{content}</div><footer className="site-footer"><span>SkillBridge / Verified potential, made visible.</span><span>{dashboard.isFetching ? "Syncing profile…" : isAuthenticated ? "Saved just now" : "Preview mode"} <span className="sync-dot" /></span></footer></main>
+      <main className="main-content"><TopBar role={role} darkMode={darkMode} setDarkMode={changeTheme} onToast={onToast} isAuthenticated={isAuthenticated} onLogin={() => setLocation("/login")} /><div className="page-content">{content}</div><footer className="site-footer"><span>SkillBridge / Verified potential, made visible.</span><span>{dashboard.isFetching ? "Syncing profile…" : isAuthenticated ? "Saved just now" : "Preview mode"} <span className="sync-dot" /></span></footer></main>
       {toast && <div className="toast"><Sparkles size={15} />{toast}</div>}
     </div>
   );
