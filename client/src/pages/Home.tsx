@@ -182,6 +182,21 @@ function WorkspaceInsights({ onToast, skillsData }: { onToast: (message: string)
   );
 }
 
+function CoursesSection({ onToast }: { onToast: (message: string) => void }) {
+  const courses = [
+    { title: "Systems thinking for builders", meta: "4 lessons · 2h 15m", progress: 42, accent: "blue", icon: Network, label: "Recommended next" },
+    { title: "TypeScript patterns in practice", meta: "6 lessons · 3h 40m", progress: 68, accent: "coral", icon: Code2, label: "In progress" },
+    { title: "Product discovery studio", meta: "8 lessons · 5h 10m", progress: 100, accent: "mint", icon: Compass, label: "Completed" },
+  ];
+  return (
+    <section className="section-block courses-section">
+      <div className="section-heading"><div><p className="eyebrow">YOUR LEARNING PATH</p><h2>Courses</h2><p>Short, practical learning loops that strengthen your verified signal.</p></div><button className="text-button" onClick={() => onToast("Course library opened.")}>Browse course library <ChevronRight size={16} /></button></div>
+      <div className="course-summary"><div className="course-summary-copy"><div className="soft-icon blue"><GraduationCap size={17} /></div><div><strong>Keep your momentum</strong><span>2 courses active · 3h 12m this week</span></div></div><div className="course-week"><span>WEEKLY GOAL</span><strong>3 / 4 sessions</strong><div><i style={{ width: "75%" }} /></div></div><button className="primary-button small" onClick={() => onToast("Your next lesson is ready.")}>Continue learning <ArrowRight size={15} /></button></div>
+      <div className="courses-grid">{courses.map((course) => { const Icon = course.icon; return <article className="course-card" key={course.title}><div className={`course-art ${course.accent}`}><Icon size={22} /><span>{course.label}</span></div><div className="course-copy"><h3>{course.title}</h3><p>{course.meta}</p><div className="course-progress-row"><span>{course.progress === 100 ? "Complete" : `${course.progress}% complete`}</span><strong>{course.progress}%</strong></div><div className="course-progress"><i style={{ width: `${course.progress}%` }} /></div><button className="text-button" onClick={() => onToast(`${course.progress === 100 ? "Reviewing" : "Opening"} ${course.title}.`)}>{course.progress === 100 ? "Review course" : "Open course"}<ArrowRight size={14} /></button></div></article>; })}</div>
+    </section>
+  );
+}
+
 function RingChart({ value, label }: { value: number; label: string }) {
   const circumference = 2 * Math.PI * 42;
   const offset = circumference - (value / 100) * circumference;
@@ -198,7 +213,7 @@ function RingChart({ value, label }: { value: number; label: string }) {
 
 function AppNav({ role, setRole, darkMode, setDarkMode, onToast }: { role: Role; setRole: (role: Role) => void; darkMode: boolean; setDarkMode: (value: boolean) => void; onToast: (message: string) => void }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const roleLabels = { talent: "Talent", hiring: "Hiring", academia: "Academia" };
+  const roleLabels = { talent: "Student", hiring: "Hiring", academia: "Academia" };
   return (
     <aside className={`app-rail ${mobileOpen ? "open" : ""}`}>
       <div className="rail-top">
@@ -219,8 +234,8 @@ function AppNav({ role, setRole, darkMode, setDarkMode, onToast }: { role: Role;
         {[
           { label: "Overview", icon: LayoutDashboard },
           { label: role === "talent" ? "My skill graph" : role === "hiring" ? "Intelligent search" : "Cohort pulse", icon: Network },
-          { label: role === "talent" ? "Opportunities" : role === "hiring" ? "Shortlists" : "Curriculum map", icon: role === "talent" ? BriefcaseBusiness : BookOpen },
-          { label: "Assessments", icon: Target },
+          { label: role === "talent" ? "Courses" : role === "hiring" ? "Shortlists" : "Curriculum map", icon: role === "talent" ? GraduationCap : BookOpen },
+          { label: role === "talent" ? "Opportunities" : "Assessments", icon: role === "talent" ? BriefcaseBusiness : Target },
         ].map(({ label, icon: Icon }, index) => <button key={label} className={`nav-item ${index === 0 ? "active" : ""}`} onClick={() => onToast(`${label} is ready for your next session.`)}><Icon size={17} />{label}{index === 0 && <span className="nav-pip" />}</button>)}
         <span className="nav-label second">ACCOUNT</span>
         <button className="nav-item" onClick={() => onToast("Settings are coming to your workspace soon.")}><Settings2 size={17} />Settings</button>
@@ -288,6 +303,8 @@ function TalentView({ onToast, skillsData, onChallenge }: { onToast: (message: s
       </section>
 
       <WorkspaceInsights onToast={onToast} skillsData={skillsData} />
+
+      <CoursesSection onToast={onToast} />
 
       <section className="lower-grid">
         <div className="section-block matches-block"><div className="section-heading compact"><div><p className="eyebrow">DATA-BACKED DISCOVERY</p><h2>Good fits are finding you</h2></div><button className="icon-button ghost" onClick={() => onToast("All opportunities are loading.")} aria-label="More opportunities"><MoreHorizontal size={18} /></button></div><div className="match-list">{matches.map((match) => <div className="match-row" key={match.company}><div className={`company-mark ${match.color}`}>{match.initials}</div><div className="match-copy"><strong>{match.company}</strong><span>{match.role}</span></div><div className="match-score"><strong>{match.score}%</strong><span>{match.tag}</span></div><button className="icon-button ghost" onClick={() => onToast(`Opening ${match.company} opportunity.`)} aria-label={`View ${match.company}`}><ChevronRight size={17} /></button></div>)}</div></div>
